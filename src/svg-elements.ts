@@ -58,7 +58,6 @@ interface GOptions {
 }
 
 function createG(options: GOptions): SVGGElement {
-  console.log("🚀 ~ createG ~ options:", options)
   const g = document.createElementNS(SVG_NAMESPACE, "g");
   options.children.forEach((child) => child && g.appendChild(child));
 

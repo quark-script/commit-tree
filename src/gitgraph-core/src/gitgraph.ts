@@ -131,7 +131,6 @@ class GitgraphCore<TNode = SVGElement> {
    * @returns A function to remove this change listener.
    */
   public subscribe(listener: (data: RenderedData<TNode>) => void): () => void {
-    // console.log("Hello, world! subscribe");
     this.listeners.push(listener);
 
     let isSubscribed = true;

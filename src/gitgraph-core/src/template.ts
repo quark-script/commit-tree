@@ -376,8 +376,8 @@ const blackArrowTemplate = new Template({
 const metroTemplate = new Template({
   colors: ["#979797", "#008fb5", "#f1c109"],
   branch: {
-    lineWidth: 10,
-    spacing: 50,
+    lineWidth: 2,
+    spacing: 200,
   },
   commit: {
     spacing: 80,
