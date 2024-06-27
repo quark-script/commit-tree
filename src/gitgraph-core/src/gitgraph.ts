@@ -87,7 +87,6 @@ class GitgraphCore<TNode = SVGElement> {
   private nextTimeoutId: number | null = null;
 
   constructor(options: GitgraphOptions = {}) {
-    console.log("Hello, world!");
     this.template = getTemplate(options.template);
 
     // Set a default `master` branch
@@ -236,14 +235,14 @@ class GitgraphCore<TNode = SVGElement> {
         (tipsOfMergedBranches: Commit<TNode>[], commit: Commit<TNode>) =>
           commit.parents.length > 1
             ? [
-                ...tipsOfMergedBranches,
-                ...commit.parents
-                  .slice(1)
-                  .map(
-                    (parentHash) =>
-                      this.commits.find(({ hash }) => parentHash === hash)!,
-                  ),
-              ]
+              ...tipsOfMergedBranches,
+              ...commit.parents
+                .slice(1)
+                .map(
+                  (parentHash) =>
+                    this.commits.find(({ hash }) => parentHash === hash)!,
+                ),
+            ]
             : tipsOfMergedBranches,
         [],
       );
@@ -259,8 +258,8 @@ class GitgraphCore<TNode = SVGElement> {
           currentCommit =
             currentCommit.parents.length > 0
               ? this.commits.find(
-                  ({ hash }) => currentCommit!.parents[0] === hash,
-                )
+                ({ hash }) => currentCommit!.parents[0] === hash,
+              )
               : undefined;
         }
       });

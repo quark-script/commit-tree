@@ -2,7 +2,7 @@ export {
   createSvg,
   createG,
   createText,
-  createCircle,
+  createNode,
   createRect,
   createPath,
   createUse,
@@ -58,6 +58,7 @@ interface GOptions {
 }
 
 function createG(options: GOptions): SVGGElement {
+  console.log("🚀 ~ createG ~ options:", options)
   const g = document.createElementNS(SVG_NAMESPACE, "g");
   options.children.forEach((child) => child && g.appendChild(child));
 
@@ -109,30 +110,30 @@ interface TextOptions {
 
 function createText(options: TextOptions): SVGTextElement {
   const text = document.createElementNS(SVG_NAMESPACE, "text");
-  text.setAttribute("alignment-baseline", "central");
-  text.setAttribute("dominant-baseline", "central");
-  text.textContent = options.content;
+  // text.setAttribute("alignment-baseline", "central");
+  // text.setAttribute("dominant-baseline", "central");
+  // text.textContent = options.content;
 
-  if (options.fill) {
-    text.setAttribute("fill", options.fill);
-  }
+  // if (options.fill) {
+  //   text.setAttribute("fill", options.fill);
+  // }
 
-  if (options.font) {
-    text.setAttribute("style", `font: ${options.font}`);
-  }
+  // if (options.font) {
+  //   text.setAttribute("style", `font: ${options.font}`);
+  // }
 
-  if (options.anchor) {
-    text.setAttribute("text-anchor", options.anchor);
-  }
+  // if (options.anchor) {
+  //   text.setAttribute("text-anchor", options.anchor);
+  // }
 
-  if (options.translate) {
-    text.setAttribute("x", options.translate.x.toString());
-    text.setAttribute("y", options.translate.y.toString());
-  }
+  // if (options.translate) {
+  //   text.setAttribute("x", options.translate.x.toString());
+  //   text.setAttribute("y", options.translate.y.toString());
+  // }
 
-  if (options.onClick) {
-    text.addEventListener("click", options.onClick);
-  }
+  // if (options.onClick) {
+  //   text.addEventListener("click", options.onClick);
+  // }
 
   return text;
 }
@@ -143,23 +144,67 @@ interface CircleOptions {
   fill?: string;
 }
 
-function createCircle(options: CircleOptions): SVGCircleElement {
-  const circle = document.createElementNS(SVG_NAMESPACE, "circle");
+function createNode(options: CircleOptions): SVGElement {
+  const svgNS = "http://www.w3.org/2000/svg";
+  const xhtmlNS = "http://www.w3.org/1999/xhtml";
+
+  // Create the main group element
+  const g = document.createElementNS(svgNS, "g");
+
+  // Create the circle element
+  const circle = document.createElementNS(svgNS, "circle");
   circle.setAttribute("cx", options.radius.toString());
   circle.setAttribute("cy", options.radius.toString());
   circle.setAttribute("r", options.radius.toString());
+  if (options.id) circle.setAttribute("id", options.id);
+  if (options.fill) circle.setAttribute("fill", options.fill);
 
-  if (options.id) {
-    circle.setAttribute("id", options.id);
-  }
+  // Create the foreignObject element
+  const foreignObject = document.createElementNS(svgNS, "foreignObject");
+  foreignObject.setAttribute("x", "-60");
+  foreignObject.setAttribute("y", "-50");
+  foreignObject.setAttribute("width", "150");
+  foreignObject.setAttribute("height", "100");
 
-  if (options.fill) {
-    circle.setAttribute("fill", options.fill);
-  }
+  // Create the div inside the foreignObject
+  const div = document.createElementNS(xhtmlNS, "div");
+  div.setAttribute("xmlns", xhtmlNS);
+  div.style.width = "100%";
+  div.style.height = "100%";
+  div.classList.add("node");
+  // div.style.backgroundColor = "white"; 
+  div.style.border = "1px solid black";
+  div.innerText = "Commit Title";
 
-  return circle;
+  // Create the tooltip div
+  const tooltip = document.createElementNS(xhtmlNS, "div");
+  tooltip.setAttribute("xmlns", xhtmlNS);
+  tooltip.style.position = "absolute";
+  tooltip.style.display = "none";
+  tooltip.style.width = "200px";
+  tooltip.style.backgroundColor = "lightgrey";
+  tooltip.innerText = "Tooltip Content";
+
+  // Add event listeners for hover
+  div.addEventListener("mouseover", () => {
+    tooltip.style.display = "block";
+  });
+  div.addEventListener("mouseout", () => {
+    tooltip.style.display = "none";
+  });
+
+  div.addEventListener("click", () => {
+    alert("Node clicked!");
+  });
+
+  foreignObject.appendChild(div);
+  foreignObject.appendChild(tooltip);
+
+  g.appendChild(circle);
+  g.appendChild(foreignObject);
+
+  return g;
 }
-
 interface RectOptions {
   width: number;
   height: number;

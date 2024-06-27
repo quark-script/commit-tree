@@ -22,11 +22,11 @@ import {
   createSvg,
   createG,
   createText,
-  createCircle,
+  createNode,
   createUse,
   createPath,
   createClipPath,
-  createDefs,
+  // createDefs,
   createForeignObject,
 } from "./svg-elements";
 import {
@@ -97,8 +97,7 @@ function createGitgraph(
 
   // React on gitgraph updates to re-render the graph.
   const gitgraph = new GitgraphCore(options);
-  console.log("🚀 ~ gitgraph:", gitgraph)
-  console.log("🚀 ~ options:", options)
+
   gitgraph.subscribe((data) => {
     shouldRecomputeOffsets = true;
     render(data);
@@ -126,7 +125,7 @@ function createGitgraph(
       createG({
         // Translate graph left => left-most branch label is not cropped (horizontal)
         // Translate graph down => top-most commit tooltip is not cropped
-        translate: { x: BRANCH_LABEL_PADDING_X, y: TOOLTIP_PADDING },
+        translate: {x:70, y:70},
         children: [renderBranchesPaths(branchesPaths), $commits],
       }),
     );
@@ -245,14 +244,14 @@ function createGitgraph(
       const widthOffset = gitgraph.isHorizontal
         ? horizontalCustomOffset
         : // Add `TOOLTIP_PADDING` so we don't crop the tooltip text.
-          // Add `BRANCH_LABEL_PADDING_X` so we don't cut branch label.
-          BRANCH_LABEL_PADDING_X + TOOLTIP_PADDING;
+        // Add `BRANCH_LABEL_PADDING_X` so we don't cut branch label.
+        BRANCH_LABEL_PADDING_X + TOOLTIP_PADDING;
 
       const heightOffset = gitgraph.isHorizontal
         ? horizontalCustomOffset
         : // Add `TOOLTIP_PADDING` so we don't crop tooltip text
-          // Add `BRANCH_LABEL_PADDING_Y` so we don't crop branch label.
-          BRANCH_LABEL_PADDING_Y + TOOLTIP_PADDING + verticalCustomOffset;
+        // Add `BRANCH_LABEL_PADDING_Y` so we don't crop branch label.
+        BRANCH_LABEL_PADDING_Y + TOOLTIP_PADDING + verticalCustomOffset;
 
       if (adaptToContainer) {
         svg.setAttribute("preserveAspectRatio", "xMinYMin meet");
@@ -339,9 +338,9 @@ function createGitgraph(
         // Starting point, relative to commit
         const origin = gitgraph.reverseArrow
           ? {
-              x: commitRadius + (parent.x - commit.x),
-              y: commitRadius + (parent.y - commit.y),
-            }
+            x: commitRadius + (parent.x - commit.x),
+            y: commitRadius + (parent.y - commit.y),
+          }
           : { x: commitRadius, y: commitRadius };
 
         const path = createPath({
@@ -525,7 +524,7 @@ function createGitgraph(
     https://svgwg.org/specs/strokes/#SpecifyingStrokeAlignment
   */
     const circleId = commit.hash;
-    const circle = createCircle({
+    const circle = createNode({
       id: circleId,
       radius: commit.style.dot.size,
       fill: commit.style.dot.color || "",
@@ -546,11 +545,11 @@ function createGitgraph(
 
     const dotText = commit.dotText
       ? createText({
-          content: commit.dotText,
-          font: commit.style.dot.font,
-          anchor: "middle",
-          translate: { x: commit.style.dot.size, y: commit.style.dot.size },
-        })
+        content: commit.dotText,
+        font: commit.style.dot.font,
+        anchor: "middle",
+        translate: { x: commit.style.dot.size, y: commit.style.dot.size },
+      })
       : null;
 
     return createG({
@@ -563,7 +562,7 @@ function createGitgraph(
         if ($tooltip) $tooltip.remove();
         commit.onMouseOut();
       },
-      children: [createDefs([circle, circleClipPath]), useCirclePath, dotText],
+      children: [circle, dotText],
     });
   }
 
