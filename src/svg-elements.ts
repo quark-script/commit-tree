@@ -120,6 +120,7 @@ interface CircleOptions {
   fill?: string;
 }
 
+
 function wrapText(text: string, maxWidth: number, lineHeight: string) {
   const words = text.split(' ');
   let lines = [];
@@ -139,7 +140,6 @@ function wrapText(text: string, maxWidth: number, lineHeight: string) {
   return lines;
 }
 
-// Helper function to measure text width (simplified)
 function measureTextWidth(text: string) {
   const tempSvg = document.createElementNS(svgNS, "svg");
   const tempText = document.createElementNS(svgNS, "text");
@@ -154,75 +154,84 @@ function measureTextWidth(text: string) {
 }
 
 function createNode(options: CircleOptions): SVGElement {
-  // Create the main group element
   const g = document.createElementNS(svgNS, "g");
 
-  // Create the circle element
+  // rectangel for the node
   const rect1 = document.createElementNS(svgNS, "rect");
-  rect1.setAttribute("x", "-110"); // Static value for x
-  rect1.setAttribute("y", "10"); // Static value for y
-  rect1.setAttribute("width", "257"); // Static value for width
-  rect1.setAttribute("height", "40"); // Static value for height (adjust based on text height)
-  rect1.setAttribute("rx", "17"); // Static value for x-axis radius for rounded corners
-  rect1.setAttribute("ry", "17"); // Static value for y-axis radius for rounded corners
-  rect1.setAttribute("fill", "white"); // Static value for fill
-  rect1.setAttribute("stroke", "#9194B3"); // Static value for stroke
-  rect1.setAttribute("stroke-width", "1"); // Static value for stroke width
+  rect1.setAttribute("x", "-110");
+  rect1.setAttribute("y", "10");
+  rect1.setAttribute("width", "257");
+  rect1.setAttribute("height", "40");
+  rect1.setAttribute("rx", "17");
+  rect1.setAttribute("ry", "17");
+  rect1.setAttribute("fill", "white");
+  rect1.setAttribute("stroke", "#9194B3");
+  rect1.setAttribute("stroke-width", "1");
 
-  // Create text with static values and wrap it
+  // text for node
   const text = document.createElementNS(svgNS, "text");
-  text.setAttribute("x", "40"); // Starting x value (adjust for padding)
-  text.setAttribute("y", "35"); // Starting y value (adjust for padding)
-  text.setAttribute("font-size", "14px"); // Static value for font size
-  text.setAttribute("font-family", "Arial"); // Static value for font family
-  text.setAttribute("font-weight", "normal"); // Static value for font weight
+  text.setAttribute("x", "40");
+  text.setAttribute("y", "35");
+  text.setAttribute("font-size", "14px");
+  text.setAttribute("font-family", "Arial");
+  text.setAttribute("font-weight", "normal");
 
-  const wrappedText = wrapText("F-lambda-rph- INV (rrnD, rrnE) Δ...", 220, 18); // Adjust width and line height
+  const wrappedText = wrapText("F-lambda-rph- INV (rrnD, rrnE) Δ...", 220, 18);
   wrappedText.forEach((line, index) => {
     const tspan = document.createElementNS(svgNS, "tspan");
-    tspan.setAttribute("x", "-90"); // Same starting x value for each line
-    tspan.setAttribute("dy", index === 0 ? "0" : "1.2em"); // Adjust line height
+    tspan.setAttribute("x", "-90");
+    tspan.setAttribute("dy", index === 0 ? "0" : "1.2em");
     tspan.textContent = line;
     text.appendChild(tspan);
   });
 
-  // Create the tooltip group
+  // hover tooltip
   const tooltipGroup = document.createElementNS(svgNS, "g");
   tooltipGroup.setAttribute("visibility", "hidden");
 
-  // Create the background rectangle for the tooltip
   const rect = document.createElementNS(svgNS, "rect");
-  rect.setAttribute("x", "-75");
-  rect.setAttribute("y", "-70");
-  rect.setAttribute("width", "250");
+  rect.setAttribute("x", "-110");
+  rect.setAttribute("y", "-100");
+  rect.setAttribute("width", "257");
   rect.setAttribute("height", "100");
   rect.setAttribute("rx", "10");
   rect.setAttribute("fill", "#3B4574");
 
-  // Create the text for the tooltip
   const genotypeText = document.createElementNS(svgNS, "text");
-  genotypeText.setAttribute("x", "-70");
-  genotypeText.setAttribute("y", "-50");
+  genotypeText.setAttribute("x", "-90");
+  genotypeText.setAttribute("y", "-70");
   genotypeText.setAttribute("fill", "white");
-  genotypeText.textContent = "Genotype: F-lambda-rph- INV (rrnD, rrnE) ΔlacI ΔlysA ΔmetA";
+
+  const tooltipWrappedText = wrapText("Genotype: F-lambda-rph- INV (rrnD, rrnE) ΔlacI ΔlysA ΔmetA", 220, 18);
+  tooltipWrappedText.forEach((line, index) => {
+    const tspan = document.createElementNS(svgNS, "tspan");
+    tspan.setAttribute("x", "-90");
+    tspan.setAttribute("dy", index === 0 ? "0" : "1.2em");
+    tspan.textContent = line;
+    genotypeText.appendChild(tspan);
+  })
 
   const speciesText = document.createElementNS(svgNS, "text");
-  speciesText.setAttribute("x", "-70");
-  speciesText.setAttribute("y", "-30");
+  speciesText.setAttribute("x", "-90");
+  speciesText.setAttribute("y", "-25");
   speciesText.setAttribute("fill", "white");
   speciesText.textContent = "Species: Escherichia coli";
 
-  // Append text elements to the tooltip group
+  const arrow = document.createElementNS(svgNS, "polygon");
+  arrow.setAttribute("points", "-10,-1 10,-1 0,10"); // Adjust the points to position the triangle
+  arrow.setAttribute("fill", "#3B4574");
+  arrow.setAttribute("transform", "translate(13, 0)"); // Adjust to position the arrow below the tooltip
+
+
   tooltipGroup.appendChild(rect);
   tooltipGroup.appendChild(genotypeText);
   tooltipGroup.appendChild(speciesText);
+  tooltipGroup.appendChild(arrow);
 
-  // Append the circle and tooltip group to the main group
   g.appendChild(rect1);
   g.appendChild(text);
   g.appendChild(tooltipGroup);
 
-  // Add hover event listeners to show/hide the tooltip
   g.addEventListener('mouseenter', () => {
     tooltipGroup.setAttribute("visibility", "visible");
   });
@@ -233,6 +242,7 @@ function createNode(options: CircleOptions): SVGElement {
 
   return g;
 }
+
 interface RectOptions {
   width: number;
   height: number;

@@ -125,7 +125,7 @@ function createGitgraph(
       createG({
         // Translate graph left => left-most branch label is not cropped (horizontal)
         // Translate graph down => top-most commit tooltip is not cropped
-        translate: {x:115, y:70},
+        translate: {x:115, y:110},
         children: [renderBranchesPaths(branchesPaths), $commits],
       }),
     );

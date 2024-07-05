@@ -380,7 +380,7 @@ const metroTemplate = new Template({
     spacing: 180,
   },
   commit: {
-    spacing: 140,
+    spacing: 160,
     dot: {
       size: 14,
     },
