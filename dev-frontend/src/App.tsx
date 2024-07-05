@@ -9,40 +9,87 @@ function App() {
     graphContainer!.innerHTML = "";
     const gitgraph = createGitgraph(graphContainer!);
 
-    const master = gitgraph.branch("master");
-    master.commit("Init the project");
+    const response = [
+      {
+        branch: "main",
+        commit_data: {
+          title: "",
+          date: ""
+        },
+      },
+      {
+        branch: "main",
+        commit_data: {
+          title: "",
+          date: ""
+        },
+      },
+      {
+        branch: "main",
+        commit_data: {
+          title: "",
+          date: ""
+        },
+      },
+      {
+        branch: "develop",
+        source_branch: "main",
+        commit_data: {
+          title: "",
+          date: ""
+        },
+      },
+      {
+        branch: "develop",
+        commit_data: {
+          title: "",
+          date: ""
+        },
+      },
+      {
+        branch: "feature",
+        source_branch: "main",
+        commit_data: {
+          title: "",
+          date: ""
+        },
+      },
+      {
+        branch: "feature",
+        commit_data: {
+          title: "",
+          date: ""
+        },
+        merge_branch: "main"
+      },
+    ]
 
-    const newBranch = master.branch("new-branch");
-    newBranch.commit("Add a file").commit("Add another file").commit("Do something else").commit("Do something else");
-    master
-      .commit("Add README")
-      .commit("Add tests")
-      .commit("Implement feature");
-    master.tag("v1.0");
-    const newBranch2 = master.branch("new-branch2");
-    newBranch2.commit("Add a file").commit("Add another file").commit("Do something else").commit("Do something else");
-  
-    const newBranch3 = master.branch("new-branch3");
-    newBranch3.commit("Add a file").commit("Add another file").commit("Do something else").commit("Do something else");
+    const map = new Map();
 
+    const main = gitgraph.branch("main");
+    map.set("main", main);
 
-    
+    response.forEach((data) => {
+      let commitBranch;
+      if (map.has(data.branch)) {
+        commitBranch = map.get(data.branch);
+      }
+      else {
+        const sourceBranch = map.get(data.source_branch);
+        commitBranch = sourceBranch.branch(data.branch);
+        map.set(data.branch, commitBranch);
+      }
 
-    const develop = gitgraph.branch("develop");
-    develop.commit("Implement a feature").commit("Add tests").commit("Fix tests");
+      if (data.merge_branch) {
+        const targetBranch = map.get(data.branch);
+        const sourceBranch = map.get(data.merge_branch);
 
-    develop.merge(newBranch, "Release new version");
-
-    const newFeature = master.branch("new-feature");
-    newFeature.merge(develop, "Release new version");
-    newFeature.commit("Implement an awesome feature");
-    master.commit("Hotfix a bug");
-    newFeature.commit("Fix tests");
-
-    master.merge(newFeature, "Release new version");
-
-    console.log(gitgraph);
-
+        targetBranch.merge(sourceBranch);
+      }
+      else {
+        commitBranch.commit();
+      }
+    })
   }, [])
 
   return (
