@@ -6,6 +6,10 @@
   width: 100%;
 }
 
+body{
+  background-color: #fff;
+}
+
 .logo {
   height: 6em;
   padding: 1.5em;
@@ -37,14 +41,49 @@
   }
 }
 
-.card {
-  padding: 2em;
+.tooltip-wrapper {
+  display: none;
+  width: 220px;
+  padding: 8px;
+  border-radius: 16px;
+  background-color: #3B4574;
+  color: white;
+  border: none;
+  position: absolute;
+  z-index: 1;
+  text-align: left;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
-.read-the-docs {
-  color: #888;
+.tooltip-wrapper::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #3B4574 transparent transparent transparent;
 }
 
-.node {
-  background-color: rgb(118, 123, 123);
+.tree-node-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.date-text {
+  font-family: Roboto;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 14.06px;
+  text-align: center;
+}
+
+.tree-node {
+  width: 220px;
+  padding: 8px;
+  border-radius: 16px;
+  background-color: #F7F9FF;
+  border: 1px solid #606DAC;
 }
