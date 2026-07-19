@@ -1,89 +1,45 @@
 #root {
-  max-width: 1280px;
+  max-width: 1100px;
   margin: 0 auto;
   padding: 2rem;
-  text-align: center;
   width: 100%;
 }
 
-body{
+body {
+  background: #fff;
+  color: #1c2333;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.demo-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #e6e8f2;
+  padding-bottom: 12px;
+  margin-bottom: 8px;
+}
+
+.demo-header h1 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+}
+
+.demo-header label {
+  font-size: 13px;
+  color: #555;
+}
+
+.demo-header select {
+  font-size: 13px;
+  padding: 4px 6px;
+  border: 1px solid #ccd0e0;
+  border-radius: 6px;
   background: #fff;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.tooltip-wrapper {
-  display: none;
-  width: 220px;
-  padding: 8px;
-  border-radius: 16px;
-  background-color: #3B4574;
-  color: white;
-  border: none;
-  position: absolute;
-  z-index: 1;
-  text-align: left;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.tooltip-wrapper::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  margin-left: -5px;
-  border-width: 5px;
-  border-style: solid;
-  border-color: #3B4574 transparent transparent transparent;
-}
-
-.tree-node-wrapper {
-  position: relative;
-  display: inline-block;
-}
-
-.date-text {
-  font-family: Roboto;
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 14.06px;
-  text-align: center;
-}
-
-.tree-node {
-  width: 220px;
-  padding: 8px;
-  border-radius: 16px;
-  background-color: #F7F9FF;
-  border: 1px solid #606DAC;
+#gitgraph {
+  overflow-x: auto;
 }

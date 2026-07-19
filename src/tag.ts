@@ -1,5 +1,5 @@
 import { createG, createText, createPath } from "./svg-elements";
-import { Tag } from "./gitgraph-core/src/index";
+import type { Tag } from "./gitgraph-core/src/index";
 
 export { createTag, PADDING_X };
 

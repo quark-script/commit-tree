@@ -1,4 +1,8 @@
+import type { Commit } from "./gitgraph-core/src/index";
+
 export {
+  SVG_NAMESPACE,
+  COLORS,
   createSvg,
   createG,
   createText,
@@ -10,9 +14,28 @@ export {
   createDefs,
   createForeignObject,
 };
+export type { NodeStyle };
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
-const svgNS = "http://www.w3.org/2000/svg";
+
+/**
+ * Generic, brand-neutral palette used by the rendering layer.
+ *
+ * Kept here (instead of hard-coded throughout) so consumers have a single
+ * place to retheme the graph. Colors are intentionally product-agnostic.
+ */
+const COLORS = {
+  /** Path & label color for branches that have been deleted. */
+  deletedBranch: "#cc0000",
+  nodeFill: "#F7F9FF",
+  nodeBorder: "#606DAC",
+  nodeHover: "#E8EBF7",
+  nodeText: "#2F397D",
+  metaText: "#8A8A8A",
+  metaLabel: "#595858",
+  tooltipBubble: "#EEEEEE",
+  tooltipBubbleText: "#333333",
+};
 
 interface SVGOptions {
   viewBox?: string;
@@ -20,7 +43,6 @@ interface SVGOptions {
   width?: number;
   children?: SVGElement[];
 }
-
 
 function createSvg(options?: SVGOptions): SVGSVGElement {
   const svg = document.createElementNS(SVG_NAMESPACE, "svg");
@@ -111,134 +133,135 @@ interface TextOptions {
 
 function createText(options: TextOptions): SVGTextElement {
   const text = document.createElementNS(SVG_NAMESPACE, "text");
+  text.setAttribute("alignment-baseline", "central");
+  text.setAttribute("dominant-baseline", "central");
+  text.textContent = options.content;
+
+  if (options.fill) {
+    text.setAttribute("fill", options.fill);
+  }
+
+  if (options.font) {
+    text.setAttribute("style", `font: ${options.font}`);
+  }
+
+  if (options.anchor) {
+    text.setAttribute("text-anchor", options.anchor);
+  }
+
+  if (options.translate) {
+    text.setAttribute("x", options.translate.x.toString());
+    text.setAttribute("y", options.translate.y.toString());
+  }
+
+  if (options.onClick) {
+    text.addEventListener("click", options.onClick);
+  }
+
   return text;
 }
 
-interface CircleOptions {
-  radius: number;
-  id?: string;
-  fill?: string;
+/**
+ * Available renderings for a commit node.
+ *
+ * - `hash`  - a compact pill showing the abbreviated commit hash. The commit
+ *   title and metadata live in the message column to the right.
+ * - `label` - the commit subject rendered inside a wider node, for graphs
+ *   where the title is the primary thing to read.
+ */
+type NodeStyle = "hash" | "label";
+
+interface NodeOptions {
+  nodeStyle?: NodeStyle;
 }
 
+/**
+ * Truncate a string to `max` characters, appending an ellipsis when clipped.
+ */
+function truncate(value: string, max: number): string {
+  if (value.length <= max) return value;
+  return `${value.slice(0, Math.max(0, max - 1))}…`;
+}
 
-function wrapText(text: string, maxWidth: number, lineHeight: string) {
-  const words = text.split(' ');
-  let lines = [];
-  let currentLine = words[0];
+/**
+ * Render a commit node.
+ *
+ * Replaces gitgraph's plain circle dot with a pill/label node. Two visual
+ * concerns are handled here beyond the base library:
+ *
+ * 1. Node style (`hash` vs `label`) - see {@link NodeStyle}.
+ * 2. Merge-commit indicator - commits with more than one parent get a dashed
+ *    ring so merges stand out from ordinary commits.
+ *
+ * Click / hover behavior is owned by the wrapping group in the renderer, which
+ * forwards to the commit's `onClick` / `onMouseOver` / `onMouseOut` callbacks.
+ */
+function createNode(commit: Commit, options: NodeOptions = {}): SVGGElement {
+  const nodeStyle: NodeStyle = options.nodeStyle || "hash";
+  const isLabel = nodeStyle === "label";
+  const borderColor = commit.style.color || COLORS.nodeBorder;
 
-  for (let i = 1; i < words.length; i++) {
-    const word = words[i];
-    const width = measureTextWidth(currentLine + " " + word);
-    if (width < maxWidth) {
-      currentLine += " " + word;
-    } else {
-      lines.push(currentLine);
-      currentLine = word;
-    }
+  const g = document.createElementNS(SVG_NAMESPACE, "g");
+
+  const x = -20;
+  const y = 2;
+  const width = isLabel ? 210 : 70;
+  const height = 25;
+
+  // Merge-commit indicator: a dashed ring drawn behind the node marks commits
+  // that join two branches (more than one parent).
+  if (commit.parents.length > 1) {
+    const ring = document.createElementNS(SVG_NAMESPACE, "rect");
+    ring.setAttribute("x", (x - 4).toString());
+    ring.setAttribute("y", (y - 4).toString());
+    ring.setAttribute("width", (width + 8).toString());
+    ring.setAttribute("height", (height + 8).toString());
+    ring.setAttribute("rx", "16");
+    ring.setAttribute("ry", "16");
+    ring.setAttribute("fill", "none");
+    ring.setAttribute("stroke", borderColor);
+    ring.setAttribute("stroke-width", "1.5");
+    ring.setAttribute("stroke-dasharray", "3 3");
+    g.appendChild(ring);
   }
-  lines.push(currentLine);
-  return lines;
-}
 
-function measureTextWidth(text: string) {
-  const tempSvg = document.createElementNS(svgNS, "svg");
-  const tempText = document.createElementNS(svgNS, "text");
-  tempText.setAttribute("font-size", "14px");
-  tempText.setAttribute("font-family", "Arial");
-  tempText.textContent = text;
-  tempSvg.appendChild(tempText);
-  document.body.appendChild(tempSvg);
-  const width = tempText.getBBox().width;
-  document.body.removeChild(tempSvg);
-  return width;
-}
+  const rect = document.createElementNS(SVG_NAMESPACE, "rect");
+  rect.setAttribute("x", x.toString());
+  rect.setAttribute("y", y.toString());
+  rect.setAttribute("width", width.toString());
+  rect.setAttribute("height", height.toString());
+  rect.setAttribute("rx", "13");
+  rect.setAttribute("ry", "13");
+  rect.setAttribute("fill", COLORS.nodeFill);
+  rect.setAttribute("stroke", borderColor);
+  rect.setAttribute("stroke-width", "1");
+  rect.setAttribute("cursor", "pointer");
 
-function createNode(options: CircleOptions): SVGElement {
-  const g = document.createElementNS(svgNS, "g");
+  const label = isLabel
+    ? truncate(commit.subject, 28)
+    : commit.hashAbbrev;
 
-  // rectangel for the node
-  const rect1 = document.createElementNS(svgNS, "rect");
-  rect1.setAttribute("x", "-110");
-  rect1.setAttribute("y", "10");
-  rect1.setAttribute("width", "257");
-  rect1.setAttribute("height", "40");
-  rect1.setAttribute("rx", "17");
-  rect1.setAttribute("ry", "17");
-  rect1.setAttribute("fill", "white");
-  rect1.setAttribute("stroke", "#9194B3");
-  rect1.setAttribute("stroke-width", "1");
+  const text = document.createElementNS(SVG_NAMESPACE, "text");
+  text.setAttribute("x", (x + (isLabel ? 12 : width / 2)).toString());
+  text.setAttribute("y", (y + height / 2).toString());
+  text.setAttribute("font-size", "12px");
+  text.setAttribute("font-family", "Arial, sans-serif");
+  text.setAttribute("fill", COLORS.nodeText);
+  text.setAttribute("dominant-baseline", "middle");
+  text.setAttribute("text-anchor", isLabel ? "start" : "middle");
+  text.setAttribute("cursor", "pointer");
+  text.textContent = label;
 
-  // text for node
-  const text = document.createElementNS(svgNS, "text");
-  text.setAttribute("x", "40");
-  text.setAttribute("y", "35");
-  text.setAttribute("font-size", "14px");
-  text.setAttribute("font-family", "Arial");
-  text.setAttribute("font-weight", "normal");
+  // Local hover affordance (the wrapping group forwards the actual click).
+  const enter = () => rect.setAttribute("fill", COLORS.nodeHover);
+  const leave = () => rect.setAttribute("fill", COLORS.nodeFill);
+  rect.addEventListener("mouseenter", enter);
+  rect.addEventListener("mouseleave", leave);
+  text.addEventListener("mouseenter", enter);
+  text.addEventListener("mouseleave", leave);
 
-  const wrappedText = wrapText("F-lambda-rph- INV (rrnD, rrnE) Δ...", 220, 18);
-  wrappedText.forEach((line, index) => {
-    const tspan = document.createElementNS(svgNS, "tspan");
-    tspan.setAttribute("x", "-90");
-    tspan.setAttribute("dy", index === 0 ? "0" : "1.2em");
-    tspan.textContent = line;
-    text.appendChild(tspan);
-  });
-
-  // hover tooltip
-  const tooltipGroup = document.createElementNS(svgNS, "g");
-  tooltipGroup.setAttribute("visibility", "hidden");
-
-  const rect = document.createElementNS(svgNS, "rect");
-  rect.setAttribute("x", "-110");
-  rect.setAttribute("y", "-100");
-  rect.setAttribute("width", "257");
-  rect.setAttribute("height", "100");
-  rect.setAttribute("rx", "10");
-  rect.setAttribute("fill", "#3B4574");
-
-  const genotypeText = document.createElementNS(svgNS, "text");
-  genotypeText.setAttribute("x", "-90");
-  genotypeText.setAttribute("y", "-70");
-  genotypeText.setAttribute("fill", "white");
-
-  const tooltipWrappedText = wrapText("Genotype: F-lambda-rph- INV (rrnD, rrnE) ΔlacI ΔlysA ΔmetA", 220, 18);
-  tooltipWrappedText.forEach((line, index) => {
-    const tspan = document.createElementNS(svgNS, "tspan");
-    tspan.setAttribute("x", "-90");
-    tspan.setAttribute("dy", index === 0 ? "0" : "1.2em");
-    tspan.textContent = line;
-    genotypeText.appendChild(tspan);
-  })
-
-  const speciesText = document.createElementNS(svgNS, "text");
-  speciesText.setAttribute("x", "-90");
-  speciesText.setAttribute("y", "-25");
-  speciesText.setAttribute("fill", "white");
-  speciesText.textContent = "Species: Escherichia coli";
-
-  const arrow = document.createElementNS(svgNS, "polygon");
-  arrow.setAttribute("points", "-10,-1 10,-1 0,10"); // Adjust the points to position the triangle
-  arrow.setAttribute("fill", "#3B4574");
-  arrow.setAttribute("transform", "translate(13, 0)"); // Adjust to position the arrow below the tooltip
-
-
-  tooltipGroup.appendChild(rect);
-  tooltipGroup.appendChild(genotypeText);
-  tooltipGroup.appendChild(speciesText);
-  tooltipGroup.appendChild(arrow);
-
-  g.appendChild(rect1);
+  g.appendChild(rect);
   g.appendChild(text);
-  g.appendChild(tooltipGroup);
-
-  g.addEventListener('mouseenter', () => {
-    tooltipGroup.setAttribute("visibility", "visible");
-  });
-
-  g.addEventListener('mouseleave', () => {
-    tooltipGroup.setAttribute("visibility", "hidden");
-  });
 
   return g;
 }
@@ -276,6 +299,7 @@ interface PathOptions {
   fill?: string;
   stroke?: string;
   strokeWidth?: number;
+  strokeDasharray?: string;
   translate?: {
     x: number;
     y: number;
@@ -296,6 +320,10 @@ function createPath(options: PathOptions): SVGPathElement {
 
   if (options.strokeWidth) {
     path.setAttribute("stroke-width", options.strokeWidth.toString());
+  }
+
+  if (options.strokeDasharray) {
+    path.setAttribute("stroke-dasharray", options.strokeDasharray);
   }
 
   if (options.translate) {
@@ -351,6 +379,8 @@ function createForeignObject(
 
   const p = document.createElement("p");
   p.textContent = options.content;
+  p.style.fontSize = "12px";
+  p.style.color = COLORS.metaText;
   result.appendChild(p);
 
   return result;

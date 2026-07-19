@@ -1,33 +1,35 @@
 import {
   GitgraphCore,
-  GitgraphOptions,
-  Commit,
-  GitgraphCommitOptions,
-  RenderedData,
   MergeStyle,
   arrowSvgPath,
   toSvgPath,
-  Coordinate,
   Mode,
-  BranchUserApi,
-  GitgraphBranchOptions,
-  GitgraphTagOptions,
-  GitgraphMergeOptions,
   Orientation,
   TemplateName,
   templateExtend,
 } from "./gitgraph-core/src/index";
+import type {
+  GitgraphOptions,
+  Commit,
+  GitgraphCommitOptions,
+  RenderedData,
+  Coordinate,
+  BranchUserApi,
+  GitgraphBranchOptions,
+  GitgraphTagOptions,
+  GitgraphMergeOptions,
+} from "./gitgraph-core/src/index";
+import { formatToUserLocalTime } from "./gitgraph-core/src/utils";
 
 import {
   createSvg,
   createG,
   createText,
   createNode,
-  createUse,
   createPath,
-  createClipPath,
-  // createDefs,
-  createForeignObject,
+  COLORS,
+  SVG_NAMESPACE,
+  NodeStyle,
 } from "./svg-elements";
 import {
   createBranchLabel,
@@ -43,18 +45,35 @@ type TagOptions = GitgraphTagOptions<SVGElement>;
 type MergeOptions = GitgraphMergeOptions<SVGElement>;
 type Branch = BranchUserApi<SVGElement>;
 
+/**
+ * Options accepted by {@link createGitgraph}, extending the core options with
+ * rendering choices added by this library.
+ */
+type CommitTreeOptions = GitgraphOptions & {
+  /** Fit the graph responsively to its container. */
+  responsive?: boolean;
+  /** Commit node rendering. Defaults to `"hash"`. See {@link NodeStyle}. */
+  nodeStyle?: NodeStyle;
+  /** Render the branch color legend above the graph. Defaults to `true`. */
+  legend?: boolean;
+};
+
 export {
   createGitgraph,
-  CommitOptions,
-  Branch,
-  BranchOptions,
-  TagOptions,
-  MergeOptions,
   Mode,
   Orientation,
   TemplateName,
   templateExtend,
   MergeStyle,
+};
+export type {
+  CommitOptions,
+  CommitTreeOptions,
+  Branch,
+  BranchOptions,
+  TagOptions,
+  MergeOptions,
+  NodeStyle,
 };
 
 interface CommitYWithOffsets {
@@ -63,7 +82,7 @@ interface CommitYWithOffsets {
 
 function createGitgraph(
   graphContainer: HTMLElement,
-  options?: GitgraphOptions & { responsive?: boolean },
+  options?: CommitTreeOptions,
 ) {
   let commitsElements: {
     [commitHash: string]: {
@@ -82,6 +101,9 @@ function createGitgraph(
   let $commits: SVGElement;
   let commitMessagesX = 0;
   let $tooltip: SVGElement | null = null;
+
+  const nodeStyle: NodeStyle = (options && options.nodeStyle) || "hash";
+  const showLegend = !(options && options.legend === false);
 
   // Create an `svg` context in which we'll render the graph.
   const svg = createSvg();
@@ -116,6 +138,8 @@ function createGitgraph(
     // Store data so we can re-render after offsets are computed.
     lastData = data;
 
+    if (showLegend) renderBranchesLegend(branchesPaths);
+
     // Store $commits so we can compute offsets from actual height.
     $commits = renderCommits(commits);
 
@@ -123,9 +147,9 @@ function createGitgraph(
     svg.innerHTML = "";
     svg.appendChild(
       createG({
-        // Translate graph left => left-most branch label is not cropped (horizontal)
-        // Translate graph down => top-most commit tooltip is not cropped
-        translate: {x:115, y:110},
+        // Translate the graph so left-most nodes and top-most tooltips are not
+        // cropped by the viewBox (which starts at 0,0).
+        translate: { x: 60, y: 70 },
         children: [renderBranchesPaths(branchesPaths), $commits],
       }),
     );
@@ -281,6 +305,7 @@ function createGitgraph(
     const isBezier = gitgraph.template.branch.mergeStyle === MergeStyle.Bezier;
 
     const paths = Array.from(branchesPaths).map(([branch, coordinates]) => {
+      const isDeleted = branch.isDeleted();
       return createPath({
         d: toSvgPath(
           coordinates.map((coordinate) => coordinate.map(getWithCommitOffset)),
@@ -288,8 +313,11 @@ function createGitgraph(
           gitgraph.isVertical,
         ),
         fill: "none",
-        stroke: branch.computedColor || "",
+        // Deleted-branch marker: removed branches keep their commits but their
+        // path is drawn in the "deleted" color and dashed.
+        stroke: isDeleted ? COLORS.deletedBranch : branch.computedColor || "",
         strokeWidth: branch.style.lineWidth,
+        strokeDasharray: isDeleted ? "6 4" : undefined,
         translate: {
           x: offset,
           y: offset,
@@ -300,28 +328,100 @@ function createGitgraph(
     return createG({ children: paths });
   }
 
+  /**
+   * Render a compact legend of branch names/colors above the graph.
+   *
+   * Because commit nodes show hashes rather than branch names, the legend keeps
+   * the branch <-> color mapping legible. Entries wrap three-per-row.
+   */
+  function renderBranchesLegend(
+    branchesPaths: RenderedData<SVGElement>["branchesPaths"],
+  ): void {
+    const existing = graphContainer.querySelector(".branch-legends-container");
+    if (existing) existing.remove();
+
+    const container = document.createElement("div");
+    container.className = "branch-legends-container";
+
+    const entries = Array.from(branchesPaths);
+    for (let i = 0; i < entries.length; i += 3) {
+      const row = document.createElement("div");
+      row.className = "legend-row";
+
+      for (let j = 0; j < 3 && i + j < entries.length; j++) {
+        const [branch] = entries[i + j];
+        const isDeleted = branch.isDeleted();
+        const color = isDeleted ? COLORS.deletedBranch : branch.computedColor;
+        const name = isDeleted ? "deleted" : branch.name;
+
+        const item = document.createElement("div");
+        item.className = "legend-item";
+
+        const dot = document.createElement("span");
+        dot.className = "legend-dot";
+        if (color) dot.style.backgroundColor = color;
+
+        const label = document.createElement("span");
+        label.className = "legend-label";
+        label.textContent = name;
+        label.setAttribute("title", name);
+
+        item.appendChild(dot);
+        item.appendChild(label);
+        row.appendChild(item);
+      }
+
+      container.appendChild(row);
+    }
+
+    graphContainer.insertBefore(container, svg);
+  }
+
   function renderCommits(commits: Commit[]): SVGGElement {
     return createG({ children: commits.map(renderCommit) });
 
     function renderCommit(commit: Commit): SVGGElement {
       const { x, y } = getWithCommitOffset(commit);
 
+      // Message, branch labels and tags live in a sibling group so CSS can
+      // emphasise the commit title when its node is hovered.
+      const messageGroup = createG({
+        translate: { x: -x, y: 0 },
+        children: [
+          renderMessage(commit),
+          ...renderBranchLabels(commit),
+          ...renderTags(commit),
+        ],
+      });
+      messageGroup.classList.add("commit-message-group");
+
       return createG({
         translate: { x, y },
         children: [
           renderDot(commit),
           ...renderArrows(commit),
-
-          createG({
-            translate: { x: -x, y: 0 },
-            children: [
-              renderMessage(commit),
-              ...renderBranchLabels(commit),
-              ...renderTags(commit),
-            ],
-          }),
+          renderLeaderLine(commit, x),
+          messageGroup,
         ],
       });
+    }
+
+    // Faint horizontal leader line bridging a commit's node and its title
+    // column, so the eye can follow the node across to its message.
+    function renderLeaderLine(commit: Commit, x: number): SVGElement | null {
+      if (gitgraph.isHorizontal) return null;
+
+      const startX = 52; // just right of the node pill
+      const endX = commitMessagesX - x - 6; // stop just before the title column
+      if (endX <= startX) return null; // node sits too close to the title
+
+      const line = document.createElementNS(SVG_NAMESPACE, "line");
+      line.setAttribute("x1", startX.toString());
+      line.setAttribute("y1", "14"); // vertical centre of node and title
+      line.setAttribute("x2", endX.toString());
+      line.setAttribute("y2", "14");
+      line.setAttribute("class", "commit-leader-line");
+      return line;
     }
 
     function renderArrows(commit: Commit): Array<SVGElement | null> {
@@ -364,7 +464,6 @@ function createGitgraph(
       message = createG({ children: [] });
 
       // Add message after observer is set up => react based on body height.
-      // We might refactor it by including `onChildrenUpdate()` to `createG()`.
       adaptMessageBodyHeight(message);
       message.appendChild(commit.renderMessage(commit));
 
@@ -374,33 +473,77 @@ function createGitgraph(
     }
 
     const text = createText({
-      content: commit.message,
+      content: commit.subject,
       fill: commit.style.message.color || "",
       font: commit.style.message.font,
       onClick: commit.onMessageClick,
     });
+    text.classList.add("commit-title-text");
 
     message = createG({
       translate: { x: 0, y: commit.style.dot.size },
       children: [text],
     });
 
-    if (commit.body) {
-      const body = createForeignObject({
-        width: 600,
-        translate: { x: 10, y: 0 },
-        content: commit.body,
-      });
-
-      // Add message after observer is set up => react based on body height.
-      // We might refactor it by including `onChildrenUpdate()` to `createG()`.
+    const metaBlock = createMetaBlock(commit);
+    if (metaBlock) {
+      // Add block after observer is set up => react based on body height.
       adaptMessageBodyHeight(message);
-      message.appendChild(body);
+      message.appendChild(metaBlock);
     }
 
     setMessageRef(commit, message);
 
     return message;
+  }
+
+  /**
+   * Build the per-commit metadata block (date + author) shown under the title.
+   *
+   * Returns `null` when the commit carries neither, so the title renders alone.
+   */
+  function createMetaBlock(commit: Commit): SVGForeignObjectElement | null {
+    const date = formatToUserLocalTime(commit.date);
+    const rawAuthor = (commit.author && commit.author.name) || "";
+    const author = rawAuthor
+      ? rawAuthor.charAt(0).toUpperCase() + rawAuthor.slice(1)
+      : "";
+
+    if (!date && !author) return null;
+
+    const fo = document.createElementNS(SVG_NAMESPACE, "foreignObject");
+    fo.setAttribute("width", "600");
+    fo.setAttribute("height", "40");
+    fo.setAttribute("x", "0");
+    fo.setAttribute("y", "9");
+    fo.style.overflow = "visible";
+
+    const container = document.createElement("div");
+    container.style.fontSize = "12px";
+    container.style.color = COLORS.metaText;
+    container.style.display = "flex";
+    container.style.flexDirection = "column";
+
+    if (date) {
+      const dateEl = document.createElement("div");
+      dateEl.textContent = date;
+      container.appendChild(dateEl);
+    }
+
+    if (author) {
+      const authorEl = document.createElement("div");
+      const key = document.createElement("span");
+      key.textContent = "Author: ";
+      key.style.color = COLORS.metaLabel;
+      const value = document.createElement("span");
+      value.textContent = author;
+      authorEl.appendChild(key);
+      authorEl.appendChild(value);
+      container.appendChild(authorEl);
+    }
+
+    fo.appendChild(container);
+    return fo;
   }
 
   function adaptMessageBodyHeight(message: SVGElement): void {
@@ -487,10 +630,7 @@ function createGitgraph(
       });
       // `data-offset` is used to position tag element in `positionCommitsElements`.
       // => because when it's executed, tag offsets are not resolved yet
-      tagContainer.setAttribute(
-        "data-offset",
-        tag.style.pointerWidth.toString(),
-      );
+      tagContainer.setAttribute("data-offset", tag.style.pointerWidth.toString());
 
       setTagRef(commit, tagContainer);
 
@@ -503,45 +643,7 @@ function createGitgraph(
       return commit.renderDot(commit);
     }
 
-    /*
-    In order to handle strokes, we need to do some complex stuff here… 😅
-
-    Problem: strokes are drawn inside & outside the circle.
-    But we want the stroke to be drawn inside only!
-
-    The outside overlaps with other elements, as we expect the dot to have a fixed size. So we want to crop the outside part.
-
-    Solution:
-    1. Create the circle in a <defs>
-    2. Define a clip path that references the circle
-    3. Use the clip path, adding the stroke.
-    4. Double stroke width as half of it will be clipped (the outside part).
-
-    Ref.: https://stackoverflow.com/a/32162431/3911841
-
-    P.S. there is a proposal for a stroke-alignment property,
-    but it's still a W3C Draft ¯\_(ツ)_/¯
-    https://svgwg.org/specs/strokes/#SpecifyingStrokeAlignment
-  */
-    const circleId = commit.hash;
-    const circle = createNode({
-      id: circleId,
-      radius: commit.style.dot.size,
-      fill: commit.style.dot.color || "",
-    });
-
-    const clipPathId = `clip-${commit.hash}`;
-    const circleClipPath = createClipPath();
-    circleClipPath.setAttribute("id", clipPathId);
-    circleClipPath.appendChild(createUse(circleId));
-
-    const useCirclePath = createUse(circleId);
-    useCirclePath.setAttribute("clip-path", `url(#${clipPathId})`);
-    useCirclePath.setAttribute("stroke", commit.style.dot.strokeColor || "");
-    const strokeWidth = commit.style.dot.strokeWidth
-      ? commit.style.dot.strokeWidth * 2
-      : 0;
-    useCirclePath.setAttribute("stroke-width", strokeWidth.toString());
+    const node = createNode(commit, { nodeStyle });
 
     const dotText = commit.dotText
       ? createText({
@@ -552,7 +654,7 @@ function createGitgraph(
       })
       : null;
 
-    return createG({
+    const dotGroup = createG({
       onClick: commit.onClick,
       onMouseOver: () => {
         appendTooltipToGraph(commit);
@@ -562,14 +664,15 @@ function createGitgraph(
         if ($tooltip) $tooltip.remove();
         commit.onMouseOut();
       },
-      children: [circle, dotText],
+      children: [node, dotText],
     });
+    // Marker used by CSS to emphasise the sibling commit title on hover.
+    dotGroup.classList.add("commit-node");
+    return dotGroup;
   }
 
   function appendTooltipToGraph(commit: Commit): void {
     if (!svg.firstChild) return;
-    if (gitgraph.isVertical && gitgraph.mode !== Mode.Compact) return;
-    if (gitgraph.isVertical && !commit.style.hasTooltipInCompactMode) return;
 
     const tooltip = commit.renderTooltip
       ? commit.renderTooltip(commit)

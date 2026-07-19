@@ -20,6 +20,11 @@ interface CommitOptions<TNode> extends CommitRenderOptions<TNode> {
   hash?: string;
   parents?: string[];
   dotText?: string;
+  /**
+   * Commit date as an ISO-8601 string (e.g. `2024-06-27T10:00:00Z`).
+   * Rendered in the commit metadata block and tooltip.
+   */
+  date?: string;
   onClick?: (commit: Commit<TNode>) => void;
   onMessageClick?: (commit: Commit<TNode>) => void;
   onMouseOver?: (commit: Commit<TNode>) => void;
@@ -137,6 +142,10 @@ class Commit<TNode = SVGElement> {
    */
   public dotText?: string;
   /**
+   * Commit date as an ISO-8601 string, rendered in the metadata block/tooltip.
+   */
+  public date?: string;
+  /**
    * List of branches attached
    */
   public branches?: Array<Branch["name"]>;
@@ -210,6 +219,7 @@ class Commit<TNode = SVGElement> {
     };
 
     this.dotText = options.dotText;
+    this.date = options.date;
 
     // Set callbacks
     this.onClick = () => (options.onClick ? options.onClick(this) : undefined);
@@ -289,6 +299,7 @@ class Commit<TNode = SVGElement> {
       hash: this.hash,
       parents: this.parents,
       dotText: this.dotText,
+      date: this.date,
       onClick: this.onClick,
       onMessageClick: this.onMessageClick,
       onMouseOver: this.onMouseOver,

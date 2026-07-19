@@ -14,6 +14,7 @@ export {
   isUndefined,
   withoutUndefinedKeys,
   arrowSvgPath,
+  formatToUserLocalTime,
 };
 
 /**
@@ -102,7 +103,7 @@ function isUndefined(obj: any): obj is undefined {
 function withoutUndefinedKeys<T>(
   obj: T = {} as T,
 ): NonMatchingProp<T, undefined> {
-  return (Object.keys(obj) as [keyof T]).reduce<T>(
+  return (Object.keys(obj as object) as [keyof T]).reduce<T>(
     (mem: any, key) =>
       isUndefined(obj[key]) ? mem : { ...mem, [key]: obj[key] },
     {} as T,
@@ -216,4 +217,31 @@ function getAlpha<TNode = SVGElement>(
   }
 
   return Math.atan2(alphaY, alphaX);
+}
+
+/**
+ * Format an ISO date string into a compact, timezone-aware local timestamp.
+ *
+ * Used by the commit metadata block and tooltip. Returns an empty string for
+ * missing/invalid input so callers can render it unconditionally.
+ *
+ * @param isoDateStr ISO-8601 date string (e.g. `2024-06-27T10:00:00Z`)
+ */
+function formatToUserLocalTime(isoDateStr?: string): string {
+  if (!isoDateStr) return "";
+
+  const date = new Date(isoDateStr);
+  if (isNaN(date.getTime())) return "";
+
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZoneName: "short",
+  });
+
+  return formatter.format(date).replace(",", "");
 }

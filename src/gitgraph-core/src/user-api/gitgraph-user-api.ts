@@ -24,6 +24,10 @@ interface GitgraphCommitOptions<TNode> extends CommitRenderOptions<TNode> {
   hash?: string;
   style?: TemplateOptions["commit"];
   dotText?: string;
+  /**
+   * Commit date as an ISO-8601 string, shown in the metadata block/tooltip.
+   */
+  date?: string;
   tag?: string;
   onClick?: (commit: Commit<TNode>) => void;
   onMessageClick?: (commit: Commit<TNode>) => void;

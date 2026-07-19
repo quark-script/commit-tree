@@ -1,18 +1,48 @@
-import { Commit } from "./gitgraph-core/src/index";
+import type { Commit } from "./gitgraph-core/src/index";
+import { formatToUserLocalTime } from "./gitgraph-core/src/utils";
 
-import { createG, createPath, createText } from "./svg-elements";
+import { createG, createPath, COLORS, SVG_NAMESPACE } from "./svg-elements";
 
 export { createTooltip, PADDING };
 
 const PADDING = 10;
 const OFFSET = 10;
 
+/**
+ * Build the hover tooltip for a commit.
+ *
+ * Beyond the upstream "hash - subject" tooltip, this renders commit metadata
+ * (author and formatted date) on a second line when available, and grows the
+ * speech bubble to fit. The bubble path is recomputed from the measured text
+ * width once the text is in the DOM.
+ */
 function createTooltip(commit: Commit): SVGElement {
-  const path = createPath({ d: "", fill: "#EEE" });
-  const text = createText({
-    translate: { x: OFFSET + PADDING, y: 0 },
-    content: `${commit.hashAbbrev} - ${commit.subject}`,
-    fill: "#333",
+  const path = createPath({ d: "", fill: COLORS.tooltipBubble });
+
+  const lines = [`${commit.hashAbbrev} · ${commit.subject}`];
+  const meta = [commit.author && commit.author.name, formatToUserLocalTime(commit.date)]
+    .filter(Boolean)
+    .join("   ·   ");
+  if (meta) lines.push(meta);
+
+  const hasMeta = lines.length > 1;
+  const boxHeight = hasMeta ? 58 : 44;
+
+  const text = document.createElementNS(SVG_NAMESPACE, "text");
+  text.setAttribute("fill", COLORS.tooltipBubbleText);
+  lines.forEach((line, index) => {
+    const tspan = document.createElementNS(SVG_NAMESPACE, "tspan");
+    tspan.setAttribute("x", (OFFSET + PADDING).toString());
+    if (index === 0) {
+      tspan.setAttribute("y", (hasMeta ? -6 : 0).toString());
+      tspan.setAttribute("font-size", "13px");
+    } else {
+      tspan.setAttribute("dy", "1.5em");
+      tspan.setAttribute("font-size", "11px");
+      tspan.setAttribute("fill", "#6B6B6B");
+    }
+    tspan.textContent = line;
+    text.appendChild(tspan);
   });
 
   const commitSize = commit.style.dot.size * 2;
@@ -25,7 +55,6 @@ function createTooltip(commit: Commit): SVGElement {
     const { width } = text.getBBox();
 
     const radius = 5;
-    const boxHeight = 50;
     const boxWidth = OFFSET + width + 2 * PADDING;
 
     const pathD = [
@@ -43,8 +72,6 @@ function createTooltip(commit: Commit): SVGElement {
       "z",
     ].join(" ");
 
-    // Ideally, it would be great to refactor these behavior into SVG elements.
-    // rect.setAttribute("width", boxWidth.toString());
     path.setAttribute("d", pathD.toString());
   });
 
